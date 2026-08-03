@@ -1,0 +1,88 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  user-select: none;
+}
+
+.settings-menu {
+  width: 210px;
+  height: max-content;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid rgba(0,0,0,0.08);
+  color: rgba(12,14,20,0.92);
+  -webkit-app-region: no-drag;
+}
+
+.menu-item,
+.submenu button,
+.color-row,
+.opacity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  width: 100%;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item.open,
+.submenu button:hover,
+.color-row:hover,
+.opacity-row:hover { background: rgba(0,0,0,0.06); }
+
+.menu-item { position: relative; }
+.menu-item .value { margin-left: auto; color: rgba(12,14,20,0.48); font-size: 13px; }
+.mark { width: 14px; color: #ff3141; font-weight: 700; }
+.menu-item.checked > .mark,
+.submenu button.active .mark { text-align: right; }
+.menu-item.checked > .mark::before,
+.submenu button.active .mark::before { content: "✓"; }
+.arrow { color: rgba(12,14,20,0.36); font-size: 18px; line-height: 1; }
+
+.submenu {
+  position: absolute;
+  left: calc(100% - 1px);
+  top: 0;
+  z-index: 10;
+  width: 170px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid rgba(0,0,0,0.08);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.has-sub.open > .submenu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+#history-menu .submenu { top: 0; }
+#palette-menu .submenu { top: -108px; width: 160px; }
+#align-menu .submenu { top: auto; bottom: 0; }
+#bg-menu .submenu { top: auto; bottom: 0; width: 196px; }
+
+.opacity-row { cursor: default; }
+.opacity-row input { flex: 1; min-width: 0; }
+.hidden { display: none !important; }

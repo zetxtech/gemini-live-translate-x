@@ -1,0 +1,27 @@
+{
+  "name": "meeting-translator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cut-hold": "vitest run src/sentence-cut-engine.test.ts && python scripts/test_sentence_cut_hold.py",
+    "test:subtitle": "vitest run src/sentence-cut-engine.test.ts src/subtitle-frame.test.ts src/subtitle-scroll.test.ts src/subtitle-e2e.test.ts",
+    "test:e2e": "vitest run src/subtitle-e2e.test.ts"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vitest": "^3.2.7"
+  }
+}

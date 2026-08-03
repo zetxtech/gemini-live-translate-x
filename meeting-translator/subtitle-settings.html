@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>字幕设置</title>
+  <link rel="stylesheet" href="/src/subtitle-settings.css"/>
+</head>
+<body>
+  <div class="settings-menu" id="settings-menu" role="menu">
+    <button class="menu-item" id="set-top" type="button" role="menuitemcheckbox"><span>总在最前</span><span class="mark"></span></button>
+    <button class="menu-item" id="set-bilingual" type="button" role="menuitemcheckbox"><span>中英对照</span><span class="mark"></span></button>
+    <div class="menu-item has-sub" id="history-menu" role="menuitem">
+      <span>历史行数</span><span class="value" id="history-value">1</span><span class="arrow">›</span>
+      <div class="submenu" id="history-submenu" role="menu">
+        <button data-history="0" type="button">0 行<span class="mark"></span></button>
+        <button data-history="1" type="button">1 行<span class="mark"></span></button>
+        <button data-history="2" type="button">2 行<span class="mark"></span></button>
+      </div>
+    </div>
+    <div class="menu-item has-sub palette-item" id="palette-menu" role="menuitem">
+      <span>更换配色</span><span class="arrow">›</span>
+      <div class="submenu palette-submenu" role="menu">
+        <button data-palette="red" type="button">柔和红<span class="mark"></span></button>
+        <button data-palette="yellow" type="button">暖光黄<span class="mark"></span></button>
+        <button data-palette="green" type="button">清新绿<span class="mark"></span></button>
+        <button data-palette="blue" type="button">天空蓝<span class="mark"></span></button>
+        <button data-palette="purple" type="button">淡雅紫<span class="mark"></span></button>
+        <button data-palette="gray" type="button">低调灰<span class="mark"></span></button>
+      </div>
+    </div>
+    <div class="menu-item has-sub" id="bg-menu" role="menuitem">
+      <span>字幕背景风格</span><span class="value" id="bg-value">玻璃</span><span class="arrow">›</span>
+      <div class="submenu bg-submenu" id="bg-submenu" role="menu">
+        <button data-bg-style="none" type="button">无<span class="mark"></span></button>
+        <button data-bg-style="glass" type="button">玻璃<span class="mark"></span></button>
+        <button data-bg-style="black" type="button">黑色<span class="mark"></span></button>
+        <button data-bg-style="white" type="button">白色<span class="mark"></span></button>
+        <label class="opacity-row" id="opacity-row"><span>透明度</span><input id="set-bg-opacity" type="range" min="0" max="1" step="0.05"/></label>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/subtitle-settings.ts"></script>
+</body>
+</html>

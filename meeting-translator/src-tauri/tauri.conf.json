@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "meeting-translator",
+  "version": "0.1.0",
+  "identifier": "com.jack.meeting-translator",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Meeting Translator",
+        "width": 520,
+        "height": 680,
+        "minWidth": 420,
+        "minHeight": 500,
+        "center": true,
+        "decorations": false,
+        "transparent": false
+      },
+      {
+        "label": "subtitles",
+        "title": "Subtitles",
+        "url": "subtitles.html",
+        "width": 900,
+        "height": 180,
+        "minWidth": 400,
+        "minHeight": 60,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": true
+      },
+      {
+        "label": "subtitle-settings",
+        "title": "Subtitle Settings",
+        "url": "subtitle-settings.html",
+        "width": 430,
+        "height": 230,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

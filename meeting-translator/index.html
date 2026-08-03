@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>会议字幕翻译</title>
+  <link rel="stylesheet" href="/src/styles.css"/>
+</head>
+<body>
+  <header id="titlebar" data-tauri-drag-region>
+    <div class="tb-left" data-tauri-drag-region>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+      <span data-tauri-drag-region>会议字幕翻译</span>
+    </div>
+    <div class="tb-btns">
+      <button class="tbb" id="btn-taskbar-min" title="收起到右下角">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v7H3z"/><path d="M2 13h12"/><path d="M8 6v4"/><path d="M6 8l2 2 2-2"/></svg>
+      </button>
+      <button class="tbb" id="btn-min">
+        <svg viewBox="0 0 12 12" width="14" height="14"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="tbb" id="btn-max">
+        <svg viewBox="0 0 12 12" width="14" height="14"><rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="tbb tbb-close" id="btn-close">
+        <svg viewBox="0 0 12 12" width="14" height="14"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="content">
+    <section class="hero-card">
+      <div>
+        <div class="hero-kicker">实时会议字幕</div>
+        <h1>语音翻译控制台</h1>
+        <p>基于 Gemini AI 的音频实时翻译。</p>
+      </div>
+      <button id="btn-subtitle" class="subtitle-toggle" type="button">
+        <span class="toggle-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="16" x2="6" y2="12"/><line x1="10" y1="16" x2="18" y2="16"/><line x1="14" y1="16" x2="14" y2="12"/><line x1="6" y1="12" x2="14" y2="12"/></svg>
+        </span>
+        <span id="subtitle-toggle-text">开启悬浮字幕</span>
+      </button>
+    </section>
+
+    <section class="card">
+      <label class="field-label">Gemini API 密钥</label>
+      <div class="input-row">
+        <input id="api-entry" type="password" class="input mono" placeholder="粘贴你的 Gemini API 密钥"/>
+        <button id="toggle-key" class="icon-btn" title="显示或隐藏密钥">
+          <svg id="eye-open" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="eye-closed" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <p class="hint">可在 <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 获取密钥</p>
+    </section>
+
+    <section class="card">
+      <label class="field-label">Base URL</label>
+      <input id="base-url-entry" type="text" class="input mono" placeholder="https://generativelanguage.googleapis.com"/>
+      <p class="hint">留空会使用官方服务；自定义服务可填写 https、http、wss 或 ws 地址。</p>
+    </section>
+
+    <section class="card">
+      <label class="field-label">代理</label>
+      <input id="proxy-entry" type="text" class="input mono" placeholder="例如 http://127.0.0.1:7890 或 socks5://127.0.0.1:7890"/>
+      <p class="hint">留空为直连；支持 HTTP 代理和 SOCKS5 代理。</p>
+    </section>
+
+    <section class="card">
+      <label class="field-label">模型</label>
+      <input id="model-entry" type="text" class="input mono" value="gemini-3.5-live-translate-preview"/>
+      <div class="preset-row">
+        <button class="preset" data-m="gemini-3.5-live-translate-preview">gemini-3.5-live-translate</button>
+        <button class="preset" data-m="gemini-2.0-flash-exp">gemini-2.0-flash-exp</button>
+        <button class="preset" data-m="gemini-2.5-flash-preview-05-20">gemini-2.5-flash</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <label class="field-label">字幕中文</label>
+      <select id="chinese-mode" class="input select">
+        <option value="zh-CN">简体中文</option>
+        <option value="zh-TW">繁体中文</option>
+        <option value="auto">自动</option>
+      </select>
+      <p class="hint">自动会根据当前系统语言选择简体或繁体。</p>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <label class="field-label" style="margin-bottom:0">音频来源</label>
+        <button id="refresh-btn" class="icon-btn" title="刷新设备">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+      </div>
+      <select id="device-combo" class="input select"></select>
+    </section>
+
+    <section class="card card-opts">
+      <label class="chk chk-large"><input id="voice" type="checkbox" checked/><span>播放翻译语音</span></label>
+      <label class="chk chk-large"><input id="tray-tip" type="checkbox" checked/><span>隐藏到托盘时显示提示</span></label>
+    </section>
+
+    <button id="start-btn" class="btn-primary">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span>开始翻译</span>
+    </button>
+    <button id="stop-btn" class="btn-danger hidden">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      <span>停止翻译</span>
+    </button>
+    <button id="test-stream-btn" class="btn-secondary">
+      <span>随机字幕测试</span>
+    </button>
+
+    <div id="status-bar" class="status-bar">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">连接已断开</span>
+    </div>
+
+    <section class="log-panel">
+      <div class="log-title">日志</div>
+      <div id="log-box" class="log-box"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
