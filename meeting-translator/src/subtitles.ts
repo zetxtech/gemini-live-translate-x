@@ -631,7 +631,6 @@ function syncHistoryLines(
       const existing = scrollStates.get(el);
       if (existing?.raf !== null && existing?.raf !== undefined) cancelAnimationFrame(existing.raf);
       scrollStates.delete(el);
-      const textNode = ensureLineText(el);
       promoted.push({ node: el, first: promoteCandidate.first });
       promoteUsed = true;
       isPromoted = true;
