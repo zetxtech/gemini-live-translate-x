@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 
 # Debug and diagnostic temp files
+scripts/*.txt
 _*.txt
 _*.log
 _*.csv
