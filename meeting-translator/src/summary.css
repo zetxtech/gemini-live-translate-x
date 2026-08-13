@@ -1,0 +1,167 @@
+* { box-sizing: border-box; }
+
+html, body { width: 100%; height: 100%; }
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #e7e8ed;
+  font-family: Inter, "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+}
+
+button { font: inherit; user-select: none; }
+
+.summary-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(112, 121, 153, 0.32);
+  border-radius: 22px;
+  background: #151823;
+  overflow: hidden;
+}
+
+.summary-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 76px;
+  padding: 14px 16px 13px 20px;
+  background: #1b1e2a;
+  border-bottom: 1px solid rgba(112, 121, 153, 0.25);
+  -webkit-app-region: drag;
+}
+.summary-kicker { margin-bottom: 4px; color: #a78bfa; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; }
+.summary-titlebar h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+.window-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #b9bdca;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.window-btn:hover { color: #fff; background: #c53b4c; }
+.window-btn:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+.window-btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.summary-content { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px 24px; }
+.summary-content::-webkit-scrollbar { width: 7px; }
+.summary-content::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.25); border-radius: 4px; }
+.summary-empty { display: grid; place-items: center; min-height: 240px; color: #8f94a8; font-size: 14px; text-align: center; }
+.summary-empty[hidden] { display: none; }
+.summary-list { display: flex; flex-direction: column; gap: 12px; }
+.summary-card { padding: 16px 18px; border: 1px solid rgba(80, 87, 118, 0.38); border-radius: 8px; background: rgba(22, 24, 34, 0.84); }
+.summary-card time { display: block; margin-bottom: 10px; color: #8f94a8; font-family: Consolas, monospace; font-size: 11px; }
+.summary-text { color: #e7e8ed; font-size: 14px; line-height: 1.75; word-break: break-word; user-select: text; }
+.summary-text p { margin: 0 0 8px; }
+.summary-text p:last-child { margin-bottom: 0; }
+.summary-text h1, .summary-text h2, .summary-text h3 { margin: 14px 0 6px; line-height: 1.35; color: #f2f3f8; }
+.summary-text h1:first-child, .summary-text h2:first-child, .summary-text h3:first-child { margin-top: 0; }
+.summary-text h1 { font-size: 17px; }
+.summary-text h2 { font-size: 15.5px; }
+.summary-text h3 { font-size: 14.5px; }
+.summary-text ul, .summary-text ol { margin: 6px 0; padding-left: 1.5em; }
+.summary-text li { margin: 3px 0; }
+.summary-text code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(167, 139, 250, 0.14);
+  color: #c9b8ff;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+}
+.summary-text pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(80, 87, 118, 0.38);
+  border-radius: 8px;
+  background: #0f1118;
+  overflow-x: auto;
+}
+.summary-text pre code { padding: 0; background: transparent; color: #d8dbe8; }
+.summary-text blockquote {
+  margin: 8px 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid #a78bfa;
+  color: #b9bdca;
+}
+.summary-text a { color: #a78bfa; text-decoration: underline; text-underline-offset: 2px; }
+.summary-text strong { color: #f2f3f8; }
+.summary-text .summary-pending { color: #8f94a8; font-style: italic; }
+.summary-qa { border-color: rgba(167, 139, 250, 0.42); }
+.summary-question { margin-bottom: 8px; color: #a78bfa; font-size: 13px; font-weight: 600; user-select: text; }
+.summary-divider { display: flex; align-items: center; gap: 10px; color: #8f94a8; font-size: 11px; }
+.summary-divider::before, .summary-divider::after { content: ""; height: 1px; flex: 1; background: rgba(112, 121, 153, 0.42); }
+
+.summary-compose {
+  flex-shrink: 0;
+  padding: 12px 16px 14px;
+  border-top: 1px solid rgba(112, 121, 153, 0.25);
+  background: #1b1e2a;
+  border-radius: 0 0 22px 22px;
+}
+.summary-status {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  margin: 0 2px 7px;
+  color: #a78bfa;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.summary-status[hidden] { display: none; }
+.summary-status.is-running::before {
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: summary-status-spin 0.75s linear infinite;
+}
+.summary-status.is-error { color: #ff9ca7; }
+@keyframes summary-status-spin { to { transform: rotate(360deg); } }
+.summary-compose-row { display: flex; align-items: center; gap: 8px; }
+.summary-compose-input {
+  flex: 1; min-width: 0;
+  background: #0f1118; border: 1px solid rgba(80, 87, 118, 0.5); border-radius: 8px;
+  padding: 8px 10px; color: #e7e8ed; font-size: 13px; font-family: inherit; outline: none;
+  transition: border-color 0.15s;
+}
+.summary-compose-input:focus { border-color: #a78bfa; }
+.summary-compose-input::placeholder { color: #6b7089; }
+.summary-compose-input:disabled { opacity: 0.5; }
+.summary-compose-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px; border: 1px solid rgba(80, 87, 118, 0.5); border-radius: 8px;
+  background: transparent; color: #b9bdca; font-size: 12.5px; font-family: inherit; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.summary-compose-btn:hover:not(:disabled) { border-color: #a78bfa; color: #fff; }
+.summary-compose-btn:disabled { opacity: 0.5; cursor: default; }
+.summary-compose-primary { background: #7c5cfc; border-color: #7c5cfc; color: #fff; }
+.summary-compose-primary:hover:not(:disabled) { background: #8b6dff; }
+.summary-compose-btn.is-busy { position: relative; padding-left: 30px; }
+.summary-compose-btn.is-busy::before {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin-top: -6px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: summary-status-spin 0.75s linear infinite;
+}

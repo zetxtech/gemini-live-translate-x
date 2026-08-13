@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI 总结</title>
+  <link rel="stylesheet" href="/src/summary.css"/>
+</head>
+<body>
+  <div class="summary-shell">
+    <header class="summary-titlebar" data-tauri-drag-region>
+      <div data-tauri-drag-region>
+        <div class="summary-kicker">会议整理</div>
+        <h1>AI 总结</h1>
+      </div>
+      <button class="window-btn" id="btn-close" type="button" title="关闭 AI 总结">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none"/></svg>
+      </button>
+    </header>
+    <main class="summary-content">
+      <div class="summary-empty" id="summary-empty">完成一次总结后，内容会显示在这里。</div>
+      <div class="summary-list" id="summary-list"></div>
+    </main>
+    <footer class="summary-compose">
+      <div class="summary-status" id="summary-status" role="status" aria-live="polite" hidden></div>
+      <div class="summary-compose-row">
+        <button id="btn-regenerate" class="summary-compose-btn" type="button" title="对当前会议重新生成总结">重新生成</button>
+        <input id="summary-question" class="summary-compose-input" type="text" placeholder="针对本次会议提问，例如：会议结论是什么？"/>
+        <button id="btn-ask" class="summary-compose-btn summary-compose-primary" type="button">提问</button>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="/src/summary.ts"></script>
+</body>
+</html>
