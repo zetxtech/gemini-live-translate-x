@@ -7,9 +7,10 @@ dist-*/
 # Local dependencies and tooling
 node_modules/
 .cursor/
+.codegraph/
 
 # User-specific project files
 *.csproj.user
 
 # External reference repositories
-ref/gemini-live-translate-macos/
+ref
