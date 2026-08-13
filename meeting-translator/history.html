@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>历史字幕</title>
+  <link rel="stylesheet" href="/src/subtitle-history.css"/>
+</head>
+<body>
+  <div class="history-shell">
+    <header class="history-titlebar" data-tauri-drag-region>
+      <div class="history-heading" data-tauri-drag-region>
+        <div class="history-kicker" id="history-session-title">字幕记录</div>
+        <div class="history-title-row">
+          <h1>历史字幕</h1>
+          <span id="history-count">0 句</span>
+        </div>
+      </div>
+      <div class="history-actions">
+        <button class="action-btn" id="copy-all" type="button" title="复制全部译文">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2" fill="none"/><path d="M5 16H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1" fill="none"/></svg>
+          <span id="copy-all-text">复制全部</span>
+        </button>
+        <button class="action-btn" id="clear-history" type="button" title="删除当前历史记录">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" fill="none"/></svg>
+          <span>删除</span>
+        </button>
+        <button class="window-btn" id="btn-close" type="button" title="关闭历史字幕">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="history-layout">
+      <aside class="session-sidebar" aria-label="同传记录">
+        <div class="session-sidebar-head">
+          <span>同传记录</span>
+          <span id="session-count">0</span>
+        </div>
+        <div class="session-list" id="session-list" role="listbox" aria-label="会议记录列表"></div>
+      </aside>
+      <main class="history-content" id="history-content">
+        <div class="history-toolbar">
+          <div class="mode-switch" id="mode-switch" role="group" aria-label="字幕显示模式">
+            <button type="button" data-mode="zh">仅中文</button>
+            <button type="button" data-mode="en">仅英文</button>
+            <button type="button" data-mode="zh-sentence">中文单句</button>
+            <button type="button" data-mode="en-sentence">英文单句</button>
+            <button type="button" data-mode="bilingual">中英双语</button>
+          </div>
+          <div class="history-ai-actions">
+            <button class="ai-btn" id="ai-align" type="button" title="使用总结模型优化中英对齐">
+              <span class="ai-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5 5l14 14M19 5 5 19" fill="none"/></svg></span>
+              <span class="ai-btn-label">AI 对齐</span>
+            </button>
+            <button class="ai-btn" id="ai-summary" type="button" title="使用总结模型生成总结">
+              <span class="ai-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" fill="none"/></svg></span>
+              <span class="ai-btn-label">AI 总结</span>
+            </button>
+            <span class="history-operation-status" id="history-operation-status" role="status" aria-live="polite" hidden></span>
+          </div>
+        </div>
+        <div class="history-body" id="history-body">
+          <div class="empty-state" id="empty-state">
+            <strong id="empty-title">暂无历史字幕</strong>
+          </div>
+          <div class="history-list" id="history-list"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div class="dialog-backdrop" id="clear-dialog" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clear-title">
+      <h2 id="clear-title">删除历史记录？</h2>
+      <p id="clear-session-warning">当前字幕记录即将被删除，无法恢复。</p>
+      <div class="confirm-actions">
+        <button class="dialog-btn" id="cancel-clear" type="button">取消</button>
+        <button class="dialog-btn dialog-btn-danger" id="confirm-clear" type="button">删除</button>
+      </div>
+    </section>
+  </div>
+  <div class="session-context-menu" id="session-context-menu" hidden>
+    <button type="button" data-session-action="delete">删除这次记录</button>
+    <button type="button" data-session-action="merge" id="merge-session-action">合并为一次记录</button>
+  </div>
+  <div class="session-context-menu" id="sentence-context-menu" hidden>
+    <button type="button" data-sentence-action="edit">编辑句子</button>
+    <button type="button" data-sentence-action="delete">删除句子</button>
+  </div>
+  <div class="dialog-backdrop" id="sentence-edit-dialog" hidden>
+    <section class="confirm-dialog sentence-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="sentence-edit-title">
+      <h2 id="sentence-edit-title">编辑句子</h2>
+      <div class="sentence-edit-list" id="sentence-edit-list"></div>
+      <div class="confirm-actions">
+        <button class="dialog-btn" id="cancel-sentence-edit" type="button">取消</button>
+        <button class="dialog-btn dialog-btn-primary" id="save-sentence-edit" type="button">保存</button>
+      </div>
+    </section>
+  </div>
+  <div class="dialog-backdrop" id="sentence-delete-dialog" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="sentence-delete-title">
+      <h2 id="sentence-delete-title">删除句子？</h2>
+      <p id="sentence-delete-warning">这句话即将被删除，无法恢复。</p>
+      <div class="confirm-actions">
+        <button class="dialog-btn" id="cancel-sentence-delete" type="button">取消</button>
+        <button class="dialog-btn dialog-btn-danger" id="confirm-sentence-delete" type="button">删除</button>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="/src/subtitle-history.ts"></script>
+</body>
+</html>

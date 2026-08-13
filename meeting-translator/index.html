@@ -19,9 +19,6 @@
       <button class="tbb" id="btn-min">
         <svg viewBox="0 0 12 12" width="14" height="14"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>
-      <button class="tbb" id="btn-max">
-        <svg viewBox="0 0 12 12" width="14" height="14"><rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-      </button>
       <button class="tbb tbb-close" id="btn-close">
         <svg viewBox="0 0 12 12" width="14" height="14"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>
@@ -56,9 +53,15 @@
     </section>
 
     <section class="card">
-      <label class="field-label">Base URL</label>
+      <div class="row-between">
+        <label class="field-label">Base URL</label>
+        <div class="format-segment" id="format-segment" role="group" aria-label="API 请求格式">
+          <button type="button" class="format-segment-option active" data-format="openai">OpenAI 格式</button>
+          <button type="button" class="format-segment-option" data-format="aistudio">Google AI Studio 格式</button>
+        </div>
+      </div>
       <input id="base-url-entry" type="text" class="input mono" placeholder="https://generativelanguage.googleapis.com"/>
-      <p class="hint">留空会使用官方服务；自定义服务可填写 https、http、wss 或 ws 地址。</p>
+      <p class="hint" id="base-url-hint">留空会使用官方服务；自定义服务应支持 OpenAI 格式。</p>
     </section>
 
     <section class="card">
@@ -68,7 +71,7 @@
     </section>
 
     <section class="card">
-      <label class="field-label">模型</label>
+      <label class="field-label">同传模型</label>
       <input id="model-entry" type="text" class="input mono" value="gemini-3.5-live-translate-preview"/>
       <div class="preset-row">
         <button class="preset" data-m="gemini-3.5-live-translate-preview">gemini-3.5-live-translate</button>
@@ -78,28 +81,70 @@
     </section>
 
     <section class="card">
+      <label class="field-label">总结模型</label>
+      <input id="summary-model-entry" type="text" class="input mono" value="gemini-3.5-flash"/>
+      <div class="preset-row">
+        <button class="preset summary-preset" data-sm="gemini-3.5-flash">gemini-3.5-flash</button>
+        <button class="preset summary-preset" data-sm="gemini-3.1-pro-preview">gemini-3.1-pro-preview</button>
+        <button class="preset summary-preset" data-sm="gemini-2.5-flash">gemini-2.5-flash</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <label class="field-label">总结 Base URL</label>
+        <div class="format-segment" id="summary-url-segment" role="group" aria-label="总结 Base URL 来源">
+          <button type="button" class="format-segment-option active" data-summary-url="same">同一 URL</button>
+          <button type="button" class="format-segment-option" data-summary-url="custom">自定义</button>
+        </div>
+      </div>
+      <input id="summary-base-url-entry" type="text" class="input mono" placeholder="https://api.openai.com/v1" disabled/>
+      <p class="hint" id="summary-base-url-hint">与上方 Base URL 使用同一地址。</p>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <label class="field-label">总结 API 密钥</label>
+        <div class="format-segment" id="summary-key-segment" role="group" aria-label="总结 API 密钥来源">
+          <button type="button" class="format-segment-option active" data-summary-key="same">同一 Key</button>
+          <button type="button" class="format-segment-option" data-summary-key="custom">自定义</button>
+        </div>
+      </div>
+      <div class="input-row">
+        <input id="summary-key-entry" type="password" class="input mono" placeholder="粘贴总结专用 API 密钥" disabled/>
+        <button id="toggle-summary-key" class="icon-btn" title="显示或隐藏密钥">
+          <svg id="summary-eye-open" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="summary-eye-closed" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="summary-key-hint">与上方 Gemini API 密钥使用同一密钥。</p>
+    </section>
+
+    <section class="card">
       <label class="field-label">字幕中文</label>
       <select id="chinese-mode" class="input select">
+        <option value="auto">自动</option>
         <option value="zh-CN">简体中文</option>
         <option value="zh-TW">繁体中文</option>
-        <option value="auto">自动</option>
       </select>
       <p class="hint">自动会根据当前系统语言选择简体或繁体。</p>
     </section>
 
     <section class="card">
-      <div class="row-between">
+      <div class="row-between audio-source-row">
         <label class="field-label" style="margin-bottom:0">音频来源</label>
         <button id="refresh-btn" class="icon-btn" title="刷新设备">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
       </div>
       <select id="device-combo" class="input select"></select>
+      <p class="hint">可选择麦克风、线路输入或系统播放声音。</p>
     </section>
 
     <section class="card card-opts">
       <label class="chk chk-large"><input id="voice" type="checkbox" checked/><span>播放翻译语音</span></label>
       <label class="chk chk-large"><input id="tray-tip" type="checkbox" checked/><span>隐藏到托盘时显示提示</span></label>
+      <label class="chk chk-large"><input id="detailed-log" type="checkbox"/><span>开启调试模式</span></label>
     </section>
 
     <button id="start-btn" class="btn-primary">
@@ -110,8 +155,11 @@
       <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
       <span>停止翻译</span>
     </button>
-    <button id="test-stream-btn" class="btn-secondary">
+    <button id="test-stream-btn" class="btn-secondary hidden">
       <span>随机字幕测试</span>
+    </button>
+    <button id="history-btn" class="btn-secondary">
+      <span>查看历史字幕</span>
     </button>
 
     <div id="status-bar" class="status-bar">
