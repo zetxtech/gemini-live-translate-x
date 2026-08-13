@@ -2130,6 +2130,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "futures-util",
+ "native-tls",
  "serde",
  "serde_json",
  "tauri",
@@ -2138,6 +2139,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-winrt-notification",
  "tokio",
+ "tokio-native-tls",
  "tokio-socks",
  "tokio-tungstenite",
  "url",

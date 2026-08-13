@@ -21,6 +21,7 @@
         "minHeight": 500,
         "center": true,
         "decorations": false,
+        "maximizable": false,
         "transparent": false
       },
       {
@@ -36,7 +37,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false,
-        "resizable": true
+        "resizable": true,
+        "maximizable": false
       },
       {
         "label": "subtitle-settings",
@@ -50,6 +52,50 @@
         "skipTaskbar": true,
         "visible": false,
         "resizable": false
+      },
+      {
+        "label": "subtitle-history",
+        "title": "历史字幕",
+        "url": "history.html",
+        "width": 760,
+        "height": 600,
+        "minWidth": 520,
+        "minHeight": 360,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "visible": false,
+        "resizable": true
+      },
+      {
+        "label": "summary",
+        "title": "AI 总结",
+        "url": "summary.html",
+        "width": 720,
+        "height": 620,
+        "minWidth": 520,
+        "minHeight": 360,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "visible": false,
+        "resizable": true
+      },
+      {
+        "label": "quick-record",
+        "title": "快速记录",
+        "url": "record.html",
+        "width": 340,
+        "height": 260,
+        "minWidth": 300,
+        "minHeight": 220,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": true
       }
     ],
     "security": {

@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for all windows",
-  "windows": ["main", "subtitles", "subtitle-settings"],
+  "windows": ["main", "subtitles", "subtitle-settings", "subtitle-history", "summary", "quick-record"],
   "permissions": [
     "core:default",
     "core:window:default",
