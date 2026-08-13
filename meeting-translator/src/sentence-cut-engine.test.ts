@@ -87,6 +87,8 @@ describe("SentenceCutEngine readable hold", () => {
 
     clock.advance(1);
     clock.flushZero();
+    expect(commits).toHaveLength(0);
+    engine.flushReadySentence();
     expect(commits).toHaveLength(1);
     expect(commits[0].t).toBe(900);
     expect(commits[0].text).toBe("确认问题切换。");
@@ -109,6 +111,7 @@ describe("SentenceCutEngine readable hold", () => {
 
     clock.advance(500);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(1);
     expect(commits[0].t).toBe(2500);
   });
@@ -128,6 +131,7 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable(firstText);
     clock.advance(500);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(1);
 
     // A new sentence needs its own fresh readable signal + hold before it commits.
@@ -141,6 +145,7 @@ describe("SentenceCutEngine readable hold", () => {
     expect(commits).toHaveLength(1);
     clock.advance(1);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(2);
     expect(commits[1].t - commits[0].t).toBeGreaterThanOrEqual(500);
   });
@@ -180,15 +185,17 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable("第一句话完。");
     clock.advance(500);
     clock.flushZero();
-    expect(commits).toHaveLength(1);
+    expect(commits).toHaveLength(0);
 
     engine.appendTranslation("第二句话也完。");
+    expect(commits).toHaveLength(1);
     clock.advance(50);
     engine.onCurrentLineReadable("第二句话也完。");
     clock.advance(499);
     expect(commits).toHaveLength(1);
     clock.advance(1);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(2);
     expect(commits[1].t - commits[0].t).toBeGreaterThanOrEqual(500);
   });
@@ -201,9 +208,10 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable("旧句子已经完。");
     clock.advance(500);
     clock.flushZero();
-    expect(commits).toHaveLength(1);
+    expect(commits).toHaveLength(0);
 
     engine.appendTranslation("新句很长需要滚动。");
+    expect(commits).toHaveLength(1);
     engine.onCurrentLineReadable("旧句子已经完。");
     clock.advance(100);
     expect(commits).toHaveLength(1);
@@ -213,6 +221,7 @@ describe("SentenceCutEngine readable hold", () => {
     expect(commits).toHaveLength(1);
     clock.advance(1);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(2);
     expect(commits[1].t - commits[0].t).toBeGreaterThanOrEqual(500);
   });
@@ -229,6 +238,20 @@ describe("SentenceCutEngine readable hold", () => {
     engine.appendTranslation("细节。");
     expect(engine.curT).toBe("正在讨论方案细节。");
     expect(engine.snapshot().awaitingReadable).toBe(true);
+  });
+
+  it("treats Chinese and English semicolons as terminal punctuation", () => {
+    const clock = new FakeClock();
+    const { engine } = createEngine(clock);
+
+    engine.appendTranslation("正在讨论方案；继续说明内容");
+    expect(engine.curT).toBe("正在讨论方案；");
+    expect(engine.snapshot().pendingCutText).toBe("正在讨论方案；");
+
+    engine.reset();
+    engine.appendTranslation("We are discussing the plan; continue with details");
+    expect(engine.curT).toBe("We are discussing the plan;");
+    expect(engine.snapshot().pendingCutText).toBe("We are discussing the plan;");
   });
 
   it("merges short tail when next chunk arrives before timeout", () => {
@@ -289,6 +312,7 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable(cutText);
     clock.advance(500);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits).toHaveLength(1);
     // The whole merged sentence commits as one history row, never the 2-char head.
     expect(commits[0].text).toBe("好的。接下来我们继续讨论。");
@@ -303,11 +327,95 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable("你好美丽世界。");
     clock.advance(500);
     clock.flushZero();
+    engine.flushReadySentence();
 
     expect(commits).toHaveLength(1);
     expect(engine.hist[0]).toEqual({ id: 1, o: "Hello world", t: "你好美丽世界。" });
-    expect(engine.curO).toBe("");
+    // Original never cuts: the line keeps its text and scrolls on.
+    expect(engine.curO).toBe("Hello world");
     expect(engine.curT).toBe("");
+  });
+
+  it("keeps appending original text as a continuous scrolling line", () => {
+    const clock = new FakeClock();
+    const { engine } = createEngine(clock);
+
+    engine.appendOriginal("First English ");
+    engine.appendOriginal("sentence.", true);
+    engine.appendTranslation("第一句");
+    engine.appendTranslation("中文。");
+    expect(engine.curO).toBe("First English sentence.");
+
+    engine.onCurrentLineReadable("第一句中文。");
+    clock.advance(500);
+    clock.flushZero();
+
+    engine.appendOriginal("Second English ");
+    expect(engine.curO).toBe("First English sentence. Second English ");
+    engine.appendOriginal("sentence.", true);
+    expect(engine.curO).toBe("First English sentence. Second English sentence.");
+    expect(engine.curT).toBe("第一句中文。");
+
+    engine.appendTranslation("第二句中文");
+    expect(engine.hist.at(-1)).toMatchObject({
+      o: "First English sentence. Second English sentence.",
+      t: "第一句中文。",
+    });
+    expect(engine.curO).toBe("First English sentence. Second English sentence.");
+    expect(engine.curT).toBe("第二句中文");
+  });
+
+  it("merges English sentences when Chinese holds a short sentence", () => {
+    const clock = new FakeClock();
+    const { engine, commits } = createEngine(clock);
+
+    // "谢谢大家。" is 4 chars <= minSentenceCutChars: held, no cut pending.
+    engine.appendTranslation("谢谢大家。");
+    expect(engine.curT).toBe("谢谢大家。");
+
+    engine.appendOriginal("Thanks everyone.", true);
+    engine.appendOriginal("Can everyone see my screen now?", true);
+    // Original scrolls continuously: every chunk appends to the same line.
+    expect(engine.curO).toBe("Thanks everyone. Can everyone see my screen now?");
+
+    engine.appendTranslation("大家现在能看到我的屏幕吗？");
+    expect(engine.curT).toBe("谢谢大家。大家现在能看到我的屏幕吗？");
+    const pendingText = engine.snapshot().pendingCutText || engine.curT;
+    engine.onCurrentLineReadable(pendingText);
+    clock.advance(500);
+    clock.flushZero();
+    engine.flushReadySentence();
+
+    expect(commits).toHaveLength(1);
+    expect(engine.hist[0]).toMatchObject({
+      o: "Thanks everyone. Can everyone see my screen now?",
+      t: "谢谢大家。大家现在能看到我的屏幕吗？",
+    });
+  });
+
+  it("appends the next English sentence while Chinese is about to cut", () => {
+    const clock = new FakeClock();
+    const { engine } = createEngine(clock);
+
+    engine.appendOriginal("Please confirm the switch.", true);
+    engine.appendTranslation("请确认问题切换。");
+    expect(engine.curO).toBe("Please confirm the switch.");
+
+    // Next English arrives during the cut hold: it keeps appending (scroll).
+    engine.appendOriginal("Next topic.", true);
+    expect(engine.curO).toBe("Please confirm the switch. Next topic.");
+
+    engine.appendTranslation("下一个主题。");
+    const pendingText = engine.snapshot().pendingCutText || engine.curT;
+    engine.onCurrentLineReadable(pendingText);
+    clock.advance(500);
+    clock.flushZero();
+    expect(engine.hist.at(-1)).toMatchObject({
+      o: "Please confirm the switch. Next topic.",
+      t: "请确认问题切换。",
+    });
+    expect(engine.curO).toBe("Please confirm the switch. Next topic.");
+    expect(engine.curT).toBe("下一个主题。");
   });
 
   it("does not cut when sentence breaks are disabled", () => {
@@ -355,6 +463,7 @@ describe("SentenceCutEngine readable hold", () => {
     engine.onCurrentLineReadable(cutText);
     clock.advance(500);
     clock.flushZero();
+    engine.flushReadySentence();
     expect(commits.length).toBeGreaterThanOrEqual(1);
     expect(commits[0].text).toContain("？！");
     // The merged tail continues after the first commit without re-splitting "？！".
@@ -372,5 +481,24 @@ describe("SentenceCutEngine readable hold", () => {
     expect(engine.hist).toHaveLength(0);
     expect(engine.snapshot().awaitingReadable).toBe(false);
     expect(engine.snapshot().hasPendingCutTimer).toBe(false);
+  });
+
+  it("keeps a completed current line until the next translation arrives", () => {
+    const clock = new FakeClock();
+    const { engine, commits } = createEngine(clock);
+
+    engine.appendTranslation("这句话已经完成。");
+    engine.onCurrentLineReadable("这句话已经完成。");
+    clock.advance(500);
+    clock.flushZero();
+
+    expect(commits).toHaveLength(0);
+    expect(engine.hist).toHaveLength(0);
+    expect(engine.curT).toBe("这句话已经完成。");
+
+    engine.appendTranslation("下一句开始");
+    expect(commits).toHaveLength(1);
+    expect(engine.hist[0].t).toBe("这句话已经完成。");
+    expect(engine.curT).toBe("下一句开始");
   });
 });

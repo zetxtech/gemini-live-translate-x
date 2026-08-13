@@ -43,6 +43,8 @@ export function buildCaptionFrame(
   const visibleHistory = historyLimit === 0
     ? []
     : payload.history.filter((item) => Boolean(item.t)).slice(-historyLimit);
+  // Keep the last completed original on screen until the next original chunk.
+  const lastOriginal = visibleHistory.length ? visibleHistory[visibleHistory.length - 1].o : "";
 
   const historyRows: SubtitleFrameRow[] = [];
   const missingHistoryRows = historyLimit - visibleHistory.length;
@@ -76,12 +78,29 @@ export function buildCaptionFrame(
         role: "current-trans",
         text: payload.curT,
         className: "line trans cur",
+        key: "current:trans",
       });
       // Reserve original row so late English does not shift layout.
+      const originText = payload.curO || lastOriginal;
       currentRows.push({
         role: "current-orig",
-        text: payload.curO || PLACEHOLDER,
-        className: payload.curO ? "line orig cur" : "line orig cur pending",
+        text: originText || PLACEHOLDER,
+        className: originText ? "line orig cur" : "line orig cur pending",
+        key: "current:orig",
+      });
+    } else if (payload.curO) {
+      // Keep the current row pair stable while translation is between chunks.
+      currentRows.push({
+        role: "current-placeholder-trans",
+        text: PLACEHOLDER,
+        className: "line trans cur pending",
+        key: "current:trans",
+      });
+      currentRows.push({
+        role: "current-orig",
+        text: payload.curO,
+        className: "line orig cur",
+        key: "current:orig",
       });
     }
   } else if (payload.curT) {
@@ -89,6 +108,7 @@ export function buildCaptionFrame(
       role: "current-trans",
       text: payload.curT,
       className: "line trans cur",
+      key: "current:trans",
     });
   }
 
@@ -99,12 +119,15 @@ export function buildCaptionFrame(
       role: "current-placeholder-trans",
       text: PLACEHOLDER,
       className: "line trans cur pending",
+      key: "current:trans",
     });
     if (settings.bilingual) {
+      const originText = payload.curO || lastOriginal;
       currentRows.push({
-        role: "current-placeholder-orig",
-        text: PLACEHOLDER,
-        className: "line orig cur pending",
+        role: originText ? "current-orig" : "current-placeholder-orig",
+        text: originText || PLACEHOLDER,
+        className: originText ? "line orig cur" : "line orig cur pending",
+        key: "current:orig",
       });
     }
   }

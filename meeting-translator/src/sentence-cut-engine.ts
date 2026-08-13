@@ -35,6 +35,7 @@ export class SentenceCutEngine {
   private pendingCutAwaitingReadable = false;
   private pendingCutText = "";
   private cutHoldActive = false;
+  private readyToCommit = false;
   private translationPacketTimes: number[] = [];
 
   private readonly now: () => number;
@@ -74,12 +75,37 @@ export class SentenceCutEngine {
     this.curT = "";
     this.hist = [];
     this.nextHistoryId = 1;
+    this.readyToCommit = false;
     this.translationPacketTimes = [];
     this.onChange();
   }
 
-  appendOriginal(text: string) {
+  resetCurrent() {
+    this.clearPendingSentenceCut();
+    this.clearPendingShortTail();
+    this.curO = "";
+    this.curT = "";
+    this.readyToCommit = false;
+    this.translationPacketTimes = [];
+  }
+
+  clearHistory() {
+    this.hist = [];
+    this.nextHistoryId = 1;
+    this.onChange();
+  }
+
+  flushReadySentence() {
+    if (!this.readyToCommit) return;
+    this.readyToCommit = false;
+    this.commitCurrentSentenceNow();
+    this.onChange();
+  }
+
+  appendOriginal(text: string, _finished = false) {
     if (!text) return;
+    // Original never cuts: it keeps appending and scrolls on the current line.
+    if (this.curO && !/\s$/.test(this.curO) && !/^\s/.test(text)) this.curO += " ";
     this.curO += text;
     this.onChange();
   }
@@ -122,6 +148,10 @@ export class SentenceCutEngine {
 
   private processTranslationText(text: string) {
     if (!text) return;
+    if (this.readyToCommit) {
+      this.readyToCommit = false;
+      this.commitCurrentSentenceNow();
+    }
     if (this.pendingShortTail) {
       const pending = this.pendingShortTail;
       if (pending.timer) this.clearTimeoutFn(pending.timer);
@@ -284,12 +314,14 @@ export class SentenceCutEngine {
       this.cutHoldActive = false;
       this.pendingCutText = "";
       this.debug(`execute cut cur=${this.formatDebugText(this.curT)} hasQueued=${Boolean(action)}`);
-      this.commitCurrentSentenceNow();
       if (action) {
+        this.commitCurrentSentenceNow();
         // Apply the queued tail before publishing the committed state. This
         // prevents the overlay from receiving an empty current row between
         // the history commit and the next sentence's first render.
         action();
+      } else {
+        this.readyToCommit = true;
       }
       this.onChange();
     }, delay);
@@ -344,8 +376,8 @@ export class SentenceCutEngine {
   }
 
   private commitCurrentSentenceNow() {
-    if (!this.curO && !this.curT) {
-      this.debug("skip commit: empty current sentence");
+    if (!this.curT) {
+      this.debug("skip commit: empty current translation");
       return;
     }
     const id = this.nextHistoryId++;
@@ -353,8 +385,8 @@ export class SentenceCutEngine {
       `commit history id=${id} o=${this.formatDebugText(this.curO)} t=${this.formatDebugText(this.curT)}`,
     );
     this.hist.push({ id, o: this.curO, t: this.curT });
-    this.curO = "";
     this.curT = "";
+    // curO is kept: the original line never cuts and keeps scrolling.
     if (this.hist.length > this.maxHistory) this.hist.shift();
   }
 
@@ -365,6 +397,7 @@ export class SentenceCutEngine {
     this.pendingCutAwaitingReadable = false;
     this.pendingCutText = "";
     this.cutHoldActive = false;
+    this.readyToCommit = false;
   }
 
   clearPendingShortTail() {

@@ -366,8 +366,8 @@ describe("e2e: empty / reset / original-first timing", () => {
     });
 
     engine.appendOriginal("Audio first");
-    // Original alone does not produce current rows (render waits for curT).
-    // Engine still holds curO for later pairing.
+    // Original shows immediately and keeps scrolling; it never waits for
+    // the translation to start.
     expect(engine.curO).toBe("Audio first");
     expect(engine.curT).toBe("");
 
