@@ -15,6 +15,7 @@ html, body {
 
 .overlay {
   --scale: 1;
+  --corner-radius: calc(22px * var(--scale));
   --bg-alpha: 0.5;
   --text-top: #ffd1d1;
   --text-mid: #ffc5c5;
@@ -29,7 +30,7 @@ html, body {
   padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   cursor: default;
   background: transparent;
-  border-radius: calc(10px * var(--scale));
+  border-radius: var(--corner-radius);
   overflow: visible;
 }
 
@@ -40,12 +41,12 @@ html, body {
   z-index: 0;
   opacity: 0;
   pointer-events: none;
-  border-radius: inherit;
+  border-radius: var(--corner-radius);
   transition: opacity 0.25s ease;
   overflow: hidden;
 }
 
-.overlay.bg-visible:not(.locked)::before { opacity: 1; }
+.overlay.bg-visible:not(.locked).show-window-background::before { opacity: 1; }
 .overlay::before { background: rgba(32, 34, 40, 0.18); }
 
 .controls {
@@ -107,6 +108,20 @@ html, body {
   color: #fff;
 }
 
+.ctrl.quick-action:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+.ctrl.quick-action.is-saved {
+  background: rgba(63, 173, 111, 0.2);
+  color: #8fe3ad;
+}
+.ctrl.quick-action.is-saved .ic { animation: quick-record-saved 0.22s ease-out; }
+@keyframes quick-record-saved {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .ctrl .ic {
   width: calc(14px * var(--scale));
   height: calc(14px * var(--scale));
@@ -140,18 +155,27 @@ html, body {
   align-items: center;
   text-align: center;
   padding: calc(16px * var(--scale)) calc(24px * var(--scale));
-  border-radius: calc(22px * var(--scale));
+  border-radius: var(--corner-radius);
   pointer-events: none;
   opacity: 1;
   transition: opacity 0.14s ease;
 }
 .lyrics.resetting { opacity: 0; }
+.lyrics[data-waiting="1"] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  width: min(calc(100% - calc(36px * var(--scale))), calc(960px * var(--scale)));
+  margin: 0 auto;
+  transform: translate(-50%, -50%);
+}
 
 .overlay.bg-glass .lyrics {
-  background: rgba(28, 30, 38, 0.24);
+  background: rgba(28, 30, 38, var(--bg-alpha));
   border: 1px solid rgba(255,255,255,0.18);
-  backdrop-filter: blur(22px) saturate(1.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(10px) saturate(1.12);
+  -webkit-backdrop-filter: blur(10px) saturate(1.12);
 }
 .overlay.bg-none .lyrics { background: transparent; border: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .overlay.bg-black .lyrics { background: rgba(0, 0, 0, var(--bg-alpha)); }
@@ -273,7 +297,7 @@ html, body {
   font-size: calc(44px * var(--scale));
   font-weight: 800;
   color: var(--text-solid);
-  text-align: left;
+  text-align: center;
   padding: calc(4px * var(--scale)) calc(8px * var(--scale));
 }
 .empty .line-text {
@@ -296,8 +320,9 @@ html, body {
   -webkit-text-fill-color: currentColor;
   background: none;
   filter: none;
-  text-align: left;
+  text-align: center;
 }
+.empty-group { align-items: center; text-align: center; }
 
 .resize-handle {
   position: absolute;
@@ -317,13 +342,35 @@ html, body {
   cursor: default;
 }
 .overlay.locked .controls {
-  opacity: 0.28;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  opacity: 0.25;
   pointer-events: auto;
+  transition: opacity 0.18s ease;
+}
+.overlay.locked.lock-hover .controls {
+  opacity: 1;
 }
 .overlay.locked .ctrl#btn-settings,
 .overlay.locked .ctrl#btn-record,
-.overlay.locked .ctrl#btn-close {
+.overlay.locked .ctrl#btn-close,
+.overlay.locked .ctrl#btn-quick-marker,
+.overlay.locked .ctrl#btn-quick-note,
+.overlay.locked .ctrl#btn-history {
   display: none;
+}
+.overlay.locked .ctrl#btn-lock {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+}
+.overlay.locked .ctrl#btn-lock:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.overlay.locked.lock-hover .ctrl#btn-lock {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 .overlay.locked::before { opacity: 0 !important; }
 

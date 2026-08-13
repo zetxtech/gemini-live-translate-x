@@ -88,7 +88,8 @@ body{font-family:'Inter','Microsoft YaHei UI','Segoe UI',system-ui,-apple-system
   display:block;font-size:11.5px;font-weight:600;color:var(--t2);
   margin-bottom:7px;letter-spacing:0.03em;text-transform:uppercase;
 }
-.row-between{display:flex;justify-content:space-between;align-items:center}
+.row-between{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.audio-source-row{margin-bottom:8px}
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
 .input{
@@ -99,6 +100,7 @@ body{font-family:'Inter','Microsoft YaHei UI','Segoe UI',system-ui,-apple-system
 }
 .input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
 .input::placeholder{color:var(--t3)}
+.input:disabled{opacity:0.5;cursor:not-allowed}
 .input.mono{font-family:Consolas,'SF Mono','Cascadia Code',monospace;font-size:12px}
 .select{
   cursor:pointer;appearance:none;
@@ -109,13 +111,30 @@ body{font-family:'Inter','Microsoft YaHei UI','Segoe UI',system-ui,-apple-system
 .input-row{display:flex;gap:5px;align-items:center}
 .input-row .input{flex:1}
 
-.icon-btn{
-  background:var(--inp);border:1px solid rgba(50,55,80,0.5);border-radius:var(--rs);
-  padding:7px 9px;color:var(--t2);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:border-color 0.12s,color 0.12s;
+.format-segment{
+  display:inline-flex;align-items:center;gap:2px;padding:1px;margin-left:10px;
+  border-radius:999px;background:var(--inp);border:1px solid rgba(50,55,80,0.5);
 }
-.icon-btn:hover{border-color:var(--accent);color:var(--accent2)}
+.format-segment-option{
+  padding:1px 8px;border:0;border-radius:999px;background:transparent;
+  color:var(--t2);font-size:10px;cursor:pointer;white-space:nowrap;line-height:1.4;
+  transition:background 0.15s,color 0.15s;
+}
+.format-segment-option:hover:not(:disabled){color:var(--t1)}
+.format-segment-option.active{background:var(--accent);color:#fff}
+.format-segment-option:disabled{cursor:default;opacity:0.55}
+
+.icon-btn{
+  background:transparent;border:0;border-radius:0;
+  padding:2px;color:var(--t2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:color 0.12s;
+}
+.icon-btn:hover{color:var(--accent2)}
+.icon-btn:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+#refresh-btn.is-refreshing svg{animation:refresh-spin 0.8s linear infinite}
+#refresh-btn:disabled{cursor:wait;opacity:0.7}
+@keyframes refresh-spin{to{transform:rotate(360deg)}}
 
 .hint{font-size:10px;color:var(--t3);margin-top:5px}
 .hint a{color:var(--accent2);text-decoration:none}

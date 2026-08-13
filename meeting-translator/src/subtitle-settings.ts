@@ -15,6 +15,7 @@ const setBilingual = document.getElementById("set-bilingual") as HTMLButtonEleme
 const historyValue = document.getElementById("history-value")!;
 const bgValue = document.getElementById("bg-value")!;
 const setBgOpacity = document.getElementById("set-bg-opacity") as HTMLInputElement;
+const opacityValue = document.getElementById("opacity-value")!;
 const opacityRow = document.getElementById("opacity-row")!;
 
 let settings = loadSettings();
@@ -41,7 +42,8 @@ function applyMenu() {
   historyValue.textContent = `${settings.historyRows}`;
   bgValue.textContent = bgLabel(settings.bgStyle);
   setBgOpacity.value = String(settings.bgOpacity);
-  opacityRow.classList.toggle("hidden", settings.bgStyle === "glass" || settings.bgStyle === "none");
+  opacityValue.textContent = `${Math.round(settings.bgOpacity * 100)}%`;
+  opacityRow.classList.toggle("hidden", settings.bgStyle === "none");
 
   document.querySelectorAll<HTMLButtonElement>("[data-palette]").forEach((button) => {
     button.classList.toggle("active", button.dataset.palette === settings.palette);

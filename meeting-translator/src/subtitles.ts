@@ -20,8 +20,12 @@ const btnSettings = document.getElementById("btn-settings")!;
 const btnLock = document.getElementById("btn-lock")!;
 const btnClose = document.getElementById("btn-close")!;
 const btnRecord = document.getElementById("btn-record")!;
+const btnQuickMarker = document.getElementById("btn-quick-marker") as HTMLButtonElement;
+const btnQuickNote = document.getElementById("btn-quick-note") as HTMLButtonElement;
+const btnHistory = document.getElementById("btn-history") as HTMLButtonElement;
 const recordIcon = document.getElementById("record-icon")!;
 const resizeBottom = document.getElementById("resize-bottom")!;
+const quickMarkerIcon = btnQuickMarker.innerHTML;
 type SubtitleLine = { id?: number; o: string; t: string };
 type ScrollState = { rawTarget: number; target: number; offset: number; velocity: number; raf: number | null; lastTime: number; lastTextWidth: number; holdUntil: number; hasReadableText: boolean; speedCapped: boolean };
 const SCROLL_SOFTNESS_RATIO = 0.08;
@@ -43,6 +47,7 @@ let resetRenderTimer: ReturnType<typeof setTimeout> | null = null;
 let instantScrollLayout = false;
 let lastRenderTime = 0;
 let renderCount = 0;
+let quickMarkerFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 /** Last text for which we already notified main that the current line is readable. */
 let lastReadableNotifiedText = "";
 const DEBUG_SESSION_ID = "7fb184";
@@ -51,6 +56,12 @@ const DEBUG_INGEST_URL = "http://127.0.0.1:7352/ingest/89bf8b89-941a-4294-9d5d-d
 function hasCJK(text: string): boolean { return CJK_RE.test(text); }
 
 function postDebugLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown> = {}) {
+  try {
+    const config = JSON.parse(localStorage.getItem("mt-cfg") || "{}");
+    if (config.dl !== true) return;
+  } catch {
+    return;
+  }
   fetch(DEBUG_INGEST_URL, {
     method: "POST",
     headers: {
@@ -96,7 +107,11 @@ function attachHistoryAnimationDebug(line: HTMLElement) {
 let fadeTimer: ReturnType<typeof setTimeout> | null = null;
 
 function activateBg() {
-  if (locked || overlay.classList.contains("bg-visible")) return;
+  if (locked) {
+    overlay.classList.add("lock-hover");
+    return;
+  }
+  if (overlay.classList.contains("bg-visible")) return;
   overlay.classList.add("bg-visible");
   invoke("set_subtitle_background_active", { active: true }).catch(console.error);
 }
@@ -106,6 +121,7 @@ function scheduleFade() {
   if (fadeTimer) clearTimeout(fadeTimer);
   fadeTimer = setTimeout(() => {
     overlay.classList.remove("bg-visible");
+    overlay.classList.remove("lock-hover");
     overlay.classList.remove("settings-open");
     invoke("set_subtitle_background_active", { active: false }).catch(console.error);
     fadeTimer = null;
@@ -132,6 +148,10 @@ listen("lock-mouse-left", () => {
 listen("subtitle-hit-hover", () => {
   if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
   activateBg();
+});
+
+listen("subtitle-hit-leave", () => {
+  if (locked) scheduleFade();
 });
 
 listen<{ running: boolean; connected: boolean }>("translation-state-changed", (event) => {
@@ -202,7 +222,60 @@ function renderRecordWarningIcon() {
 
 btnRecord.addEventListener("click", async (e) => {
   e.stopPropagation();
-  await emit("subtitle-record-toggle", {});
+  await emit("subtitle-record-toggle", { keepSubtitleWindow: true });
+});
+
+function currentQuickRecordSnapshot() {
+  return { o: latestPayload.curO, t: latestPayload.curT };
+}
+
+function updateQuickActionState() {
+  const enabled = Boolean(latestPayload.curO || latestPayload.curT);
+  btnQuickMarker.disabled = !enabled;
+  btnQuickNote.disabled = !enabled;
+}
+
+btnQuickMarker.addEventListener("click", async (event) => {
+  event.stopPropagation();
+  if (btnQuickMarker.disabled) return;
+  await emit("quick-record-request", { kind: "marker", snapshot: currentQuickRecordSnapshot() });
+});
+
+listen<{ kind: string; success: boolean; message?: string; marked?: boolean }>("quick-record-result", (event) => {
+  if (event.payload.kind !== "marker") return;
+  if (!event.payload.success) return;
+  if (quickMarkerFeedbackTimer) clearTimeout(quickMarkerFeedbackTimer);
+  if (event.payload.marked === false) {
+    btnQuickMarker.classList.remove("is-saved");
+    btnQuickMarker.title = "标记当前句";
+    btnQuickMarker.innerHTML = quickMarkerIcon;
+    quickMarkerFeedbackTimer = null;
+    return;
+  }
+  btnQuickMarker.classList.add("is-saved");
+  btnQuickMarker.title = "已标记";
+  btnQuickMarker.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  quickMarkerFeedbackTimer = setTimeout(() => {
+    btnQuickMarker.classList.remove("is-saved");
+    btnQuickMarker.title = "标记当前句";
+    btnQuickMarker.innerHTML = quickMarkerIcon;
+    quickMarkerFeedbackTimer = null;
+  }, 1200);
+});
+
+btnQuickNote.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (btnQuickNote.disabled) return;
+  void emit("quick-record-open-request", { snapshot: currentQuickRecordSnapshot() });
+});
+
+btnHistory.addEventListener("click", async (event) => {
+  event.stopPropagation();
+  try {
+    await invoke("show_subtitle_history");
+  } catch (err) {
+    console.error("open history:", err);
+  }
 });
 
 function updateRecordButton(running: boolean, connected: boolean) {
@@ -230,15 +303,11 @@ function renderRecordButtonState(running: boolean, connected: boolean) {
 }
 
 updateRecordButton(false, false);
+updateQuickActionState();
 
 function updateHitAreas() {
   const children = Array.from(lyrics.querySelectorAll<HTMLElement>(".line, .empty, .empty-sub"));
   const visibleChildren = children.filter((child) => child.offsetWidth > 0 && child.offsetHeight > 0);
-  if (!visibleChildren.length) {
-    invoke("set_subtitle_hit_areas", { areas: [] }).catch(console.error);
-    return;
-  }
-
   const rootRect = overlay.getBoundingClientRect();
   const paddingX = 4;
   const paddingY = 3;
@@ -263,20 +332,62 @@ function updateHitAreas() {
       });
   });
 
+  if (settings.bgStyle !== "none") {
+    const backgroundRect = lyrics.getBoundingClientRect();
+    if (backgroundRect.width > 1 && backgroundRect.height > 1) {
+      areas.push({
+        x: backgroundRect.left - rootRect.left,
+        y: backgroundRect.top - rootRect.top,
+        w: backgroundRect.width,
+        h: backgroundRect.height,
+      });
+    }
+  }
+
   invoke("set_subtitle_hit_areas", { areas }).catch(console.error);
 }
 
-/**
- * Align the controls' vertical center line with the top edge of the subtitle
- * background. The lyrics box is vertically centered and its height changes as
- * history/current rows appear, so the controls' top must be recomputed after
- * every render instead of staying pinned to the window edge.
- */
-function syncControlsToBackgroundTop() {
+function syncLockButtonRect() {
+  const rect = btnLock.getBoundingClientRect();
+  const overlayRect = overlay.getBoundingClientRect();
+  invoke("set_lock_button_rect", {
+    x: rect.left - overlayRect.left,
+    y: rect.top - overlayRect.top,
+    w: rect.width,
+    h: rect.height,
+  }).catch(console.error);
+}
+
+function syncControlsPosition() {
   const overlayRect = overlay.getBoundingClientRect();
   const lyricsRect = lyrics.getBoundingClientRect();
   const controlsRect = controls.getBoundingClientRect();
   if (lyricsRect.width === 0 && lyricsRect.height === 0) return;
+
+  const scale = Number.parseFloat(overlay.style.getPropertyValue("--scale")) || 1;
+
+  if (locked) {
+    // Horizontal centering comes from CSS (.overlay.locked .controls);
+    // the vertical position keeps following the lyrics area.
+    controls.style.right = "";
+    const top = settings.bgStyle !== "none"
+      ? lyricsRect.top - overlayRect.top + 8 * scale
+      : lyricsRect.top - overlayRect.top - controlsRect.height / 2;
+    controls.style.top = `${Math.max(0, top)}px`;
+    syncLockButtonRect();
+    return;
+  }
+
+  if (settings.bgStyle !== "none") {
+    const inset = 8 * scale;
+    const top = lyricsRect.top - overlayRect.top + inset;
+    const right = overlayRect.right - lyricsRect.right + inset;
+    controls.style.top = `${Math.max(0, top)}px`;
+    controls.style.right = `${Math.max(0, right)}px`;
+    return;
+  }
+
+  controls.style.right = "";
   const desiredTop = lyricsRect.top - overlayRect.top - controlsRect.height / 2;
   controls.style.top = `${Math.max(0, desiredTop)}px`;
 }
@@ -284,14 +395,16 @@ function syncControlsToBackgroundTop() {
 function syncControlsAfterLayout() {
   requestAnimationFrame(() => {
     updateHitAreas();
-    syncControlsToBackgroundTop();
+    syncControlsPosition();
   });
 }
 
 // ── Settings ────────────────────────────────────────────────────────────────
 function applySettings(renderNow = true) {
   settings = normalizeSettings(settings);
-  overlay.className = `overlay align-${settings.align} bg-${settings.bgStyle} palette-${settings.palette}${locked ? " locked" : ""}${overlay.classList.contains("bg-visible") ? " bg-visible" : ""}${overlay.classList.contains("settings-open") ? " settings-open" : ""}${settings.bilingual ? " bilingual" : ""}`;
+  const keepWindowBackground = settings.bgStyle === "none" ||
+    ((settings.bgStyle === "black" || settings.bgStyle === "white") && settings.bgOpacity === 1);
+  overlay.className = `overlay align-${settings.align} bg-${settings.bgStyle} palette-${settings.palette}${locked ? " locked" : ""}${overlay.classList.contains("bg-visible") ? " bg-visible" : ""}${overlay.classList.contains("lock-hover") ? " lock-hover" : ""}${overlay.classList.contains("settings-open") ? " settings-open" : ""}${settings.bilingual ? " bilingual" : ""}${keepWindowBackground ? " show-window-background" : ""}`;
   // bgOpacity is transparency: 0 means fully opaque (alpha 1), 1 means fully transparent.
   overlay.style.setProperty("--bg-alpha", String(1 - settings.bgOpacity));
   applyTextVariables(overlay, settings);
@@ -368,6 +481,7 @@ btnLock.addEventListener("click", async (e) => {
   if (locked) {
     overlay.classList.remove("bg-visible");
     overlay.classList.remove("settings-open");
+    overlay.classList.remove("lock-hover");
     invoke("set_subtitle_background_active", { active: false }).catch(console.error);
   } else {
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -402,9 +516,11 @@ listen<{
   curO: string;
   curT: string;
   bilingual: boolean;
+  resetDisplay?: boolean;
 }>("subtitle-update", (event) => {
-  const { history, curO, curT } = event.payload;
-  latestPayload = { history, curO, curT };
+  const { history, curO, curT, resetDisplay } = event.payload;
+  latestPayload = resetDisplay ? { history: [], curO: "", curT: "" } : { history, curO, curT };
+  updateQuickActionState();
   const now = performance.now();
   if (!lastRenderTime || now - lastRenderTime > 1000) {
     if (renderCount > 0) console.log(`[DEBUG-rate] ${renderCount} renders in last 1s`);
@@ -451,6 +567,14 @@ function renderSubtitles() {
     { history, curO, curT },
     { bilingual: settings.bilingual, historyRows: settings.historyRows },
   );
+  const wasWaiting = lyrics.dataset.waiting === "1";
+  const isWaiting = frame.showEmpty;
+  const shouldFadeStateChange = wasWaiting !== isWaiting && !lyrics.classList.contains("resetting");
+  if (shouldFadeStateChange) {
+    lyrics.classList.add("resetting");
+    requestAnimationFrame(() => lyrics.classList.remove("resetting"));
+  }
+  lyrics.dataset.waiting = isWaiting ? "1" : "0";
   postDebugLog("H1", "subtitles.ts:renderSubtitles", "render start", {
     historyLen: history.length,
     visibleHistory: frame.historyRows.map((line) => ({
@@ -478,13 +602,14 @@ function renderSubtitles() {
 
   const currentGroup = ensureGroup("current", "line-group current-group");
   const currentLines: SubtitleRenderLine[] = frame.currentRows.map((row) => ({
+    key: row.key,
     text: row.text,
     className: row.className,
   }));
   syncLines(currentGroup, currentLines);
   setGroupHidden(currentGroup, !frame.showCurrent);
 
-  const emptyGroup = ensureGroup("empty", "line-group current-group");
+  const emptyGroup = ensureGroup("empty", "line-group empty-group");
   if (frame.showEmpty) {
     syncLines(emptyGroup, frame.emptyRows.map((row) => ({ text: row.text, className: row.className })));
   } else {
@@ -532,12 +657,14 @@ function syncLines(parent: HTMLElement, lines: SubtitleRenderLine[]) {
     return;
   }
   const children = activeLineChildren(parent);
-  while (children.length > lines.length) {
-    const child = children.pop();
-    if (child) markLineExiting(parent, child);
-  }
+  const used = new Set<HTMLElement>();
+  const ordered: HTMLElement[] = [];
   for (let i = 0; i < lines.length; i++) {
-    let el = children[i];
+    const key = lines[i].key || `line:${i}`;
+    let el = children.find((child) => !used.has(child) && child.dataset.lineKey === key);
+    if (!el && !lines[i].key) {
+      el = children.find((child) => !used.has(child) && !child.dataset.lineKey);
+    }
     const isNew = !el;
     if (!el) {
       el = document.createElement("div");
@@ -551,6 +678,9 @@ function syncLines(parent: HTMLElement, lines: SubtitleRenderLine[]) {
         }, enterDuration);
       }
     }
+    el.dataset.lineKey = key;
+    used.add(el);
+    ordered.push(el);
     const wasPending = el.classList.contains("pending");
     if (!isNew && baseLineClass(el) !== lines[i].className) {
       const enteringClass = el.classList.contains("entering") ? " entering" : "";
@@ -596,6 +726,10 @@ function syncLines(parent: HTMLElement, lines: SubtitleRenderLine[]) {
     }
     requestAnimationFrame(() => updateLineOverflow(el, text));
   }
+  for (const child of children) {
+    if (!used.has(child)) markLineExiting(parent, child);
+  }
+  for (const child of ordered) parent.appendChild(child);
 }
 
 function syncHistoryLines(

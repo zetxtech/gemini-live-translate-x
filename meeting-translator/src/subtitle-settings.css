@@ -81,8 +81,9 @@ html, body {
 #history-menu .submenu { top: 0; }
 #palette-menu .submenu { top: -108px; width: 160px; }
 #align-menu .submenu { top: auto; bottom: 0; }
-#bg-menu .submenu { top: auto; bottom: 0; width: 196px; }
+#bg-menu .submenu { top: auto; bottom: -8px; width: 196px; }
 
 .opacity-row { cursor: default; }
 .opacity-row input { flex: 1; min-width: 0; }
+.opacity-value { min-width: 34px; color: rgba(12,14,20,0.48); font-size: 12px; text-align: right; }
 .hidden { display: none !important; }
