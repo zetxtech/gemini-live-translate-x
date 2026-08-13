@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>快速记录</title>
+  <link rel="stylesheet" href="/src/record.css"/>
+</head>
+<body>
+  <main class="record-shell">
+    <header class="record-titlebar" data-tauri-drag-region>
+      <div data-tauri-drag-region>
+        <h1 id="record-title">快速笔记</h1>
+      </div>
+      <button class="window-btn" id="btn-close" type="button" title="关闭">×</button>
+    </header>
+
+    <section class="record-body">
+      <section id="note-compose" class="note-view">
+        <div class="record-sentence-label">当前内容</div>
+        <div class="record-sentence" id="record-sentence"></div>
+        <textarea id="note-input" rows="4" maxlength="2000" placeholder="记录此刻的想法"></textarea>
+        <div class="record-actions">
+          <button class="record-btn record-btn-secondary" id="note-cancel" type="button">取消</button>
+          <button class="record-btn record-btn-primary" id="note-save" type="button">保存笔记</button>
+        </div>
+      </section>
+
+      <section id="record-details" class="details-view" hidden>
+        <div class="record-details-head">
+          <span>这句话的记录</span>
+          <span id="record-count">0 条</span>
+        </div>
+        <div class="record-list" id="record-list"></div>
+        <div class="record-compose">
+          <textarea id="detail-note-input" rows="2" maxlength="2000" placeholder="添加一条评论"></textarea>
+          <div class="record-actions">
+            <button class="record-btn record-btn-secondary" id="detail-marker" type="button">加标记</button>
+            <button class="record-btn record-btn-primary" id="detail-note" type="button">保存评论</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="/src/record.ts"></script>
+</body>
+</html>
