@@ -1532,7 +1532,7 @@ fn start_lock_tracking(app: tauri::AppHandle) {
             let mut cursor = None;
 
             if let Some(w) = app.get_webview_window("subtitles") {
-                if let (Ok(pos), Ok(size), Ok(scale_factor)) = (w.outer_position(), w.outer_size(), w.scale_factor()) {
+                if let (Ok(pos), Ok(size), Ok(scale_factor)) = (w.inner_position(), w.inner_size(), w.scale_factor()) {
                     let in_lock;
                     let in_controls;
                     let wx = pos.x as f64;

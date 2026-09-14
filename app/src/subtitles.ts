@@ -344,6 +344,20 @@ function updateHitAreas() {
     }
   }
 
+  const resizeRect = resizeBottom.getBoundingClientRect();
+  if (resizeRect.width > 1 && resizeRect.height > 1) {
+    const left = Math.max(0, resizeRect.left - rootRect.left);
+    const top = Math.max(0, resizeRect.top - rootRect.top);
+    const right = Math.min(rootRect.width, resizeRect.right - rootRect.left);
+    const bottom = Math.min(rootRect.height, resizeRect.bottom - rootRect.top);
+    areas.push({
+      x: left,
+      y: top,
+      w: Math.max(0, right - left),
+      h: Math.max(0, bottom - top),
+    });
+  }
+
   invoke("set_subtitle_hit_areas", { areas }).catch(console.error);
 }
 
@@ -359,43 +373,17 @@ function syncLockButtonRect() {
 }
 
 function syncControlsPosition() {
-  const overlayRect = overlay.getBoundingClientRect();
-  const lyricsRect = lyrics.getBoundingClientRect();
-  const controlsRect = controls.getBoundingClientRect();
-  if (lyricsRect.width === 0 && lyricsRect.height === 0) return;
-
-  const scale = Number.parseFloat(overlay.style.getPropertyValue("--scale")) || 1;
-
-  if (locked) {
-    // Horizontal centering comes from CSS (.overlay.locked .controls);
-    // the vertical position keeps following the lyrics area.
-    controls.style.right = "";
-    const top = settings.bgStyle !== "none"
-      ? lyricsRect.top - overlayRect.top + 8 * scale
-      : lyricsRect.top - overlayRect.top - controlsRect.height / 2;
-    controls.style.top = `${Math.max(0, top)}px`;
-    syncLockButtonRect();
-    return;
-  }
-
-  if (settings.bgStyle !== "none") {
-    const inset = 8 * scale;
-    const top = lyricsRect.top - overlayRect.top + inset;
-    const right = overlayRect.right - lyricsRect.right + inset;
-    controls.style.top = `${Math.max(0, top)}px`;
-    controls.style.right = `${Math.max(0, right)}px`;
-    return;
-  }
-
+  // Controls float as an overlay pinned to the window corner; CSS owns
+  // their placement so they never follow or avoid the lyrics content.
   controls.style.right = "";
-  const desiredTop = lyricsRect.top - overlayRect.top - controlsRect.height / 2;
-  controls.style.top = `${Math.max(0, desiredTop)}px`;
+  controls.style.top = "";
+  if (locked) syncLockButtonRect();
 }
 
 function syncControlsAfterLayout() {
   requestAnimationFrame(() => {
-    updateHitAreas();
     syncControlsPosition();
+    updateHitAreas();
   });
 }
 
