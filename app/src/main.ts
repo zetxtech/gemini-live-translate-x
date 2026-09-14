@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { loadSettings } from "./subtitle-settings-shared";
 import { SentenceCutEngine } from "./sentence-cut-engine";
 import { SubtitleHistoryAlignment } from "./subtitle-history-alignment";
@@ -695,6 +696,13 @@ async function init() {
   await listen<boolean>("subtitle-visibility-changed", (e) => {
     setSubtitleVisible(e.payload);
   });
+  // The subtitle window can already be visible without a visibility event
+  // (it is shown in the Rust app setup), so calibrate the button against
+  // the real window state.
+  try {
+    const subtitleWindow = await WebviewWindow.getByLabel("subtitles");
+    if (subtitleWindow) setSubtitleVisible(await subtitleWindow.isVisible());
+  } catch { /* keep the initial hidden state */ }
   await listen<{ keepSubtitleWindow?: boolean }>("subtitle-record-toggle", async (event) => {
     if (running) await stop(Boolean(event.payload?.keepSubtitleWindow));
     else await start();
@@ -974,7 +982,7 @@ async function stop(keepSubtitleWindow = false) {
   emitToOverlay(true);
   stopBtn.classList.add("hidden");
   startBtn.classList.remove("hidden");
-  apiEntry.disabled = baseUrlEntry.disabled = proxyEntry.disabled = modelEntry.disabled = summaryModelEntry.disabled = chineseMode.disabled = deviceCombo.disabled = false;
+  apiEntry.disabled = baseUrlEntry.disabled = proxyEntry.disabled = modelEntry.disabled = summaryModelEntry.disabled = summaryBaseUrlEntry.disabled = summaryKeyEntry.disabled = chineseMode.disabled = deviceCombo.disabled = false;
   formatButtons.forEach((button) => { button.disabled = false; });
   summaryUrlButtons.forEach((button) => { button.disabled = false; });
   updateSummaryBaseUrlUi();
@@ -1467,7 +1475,7 @@ function beginSummarySession() {
 function historySnapshotForSession(sessionId?: string) {
   if (!sessionId || sessionId === activeSessionId) return historyAlignment.snapshot();
   const session = getSession(sessionId);
-  return session ? { history: session.sentences, curO: "", curT: "" } : null;
+  return session ? { history: session.sentences, curO: "", curT: "", curId: null } : null;
 }
 
 // 指定会话是否已有总结或问答（旧存档无 sessionId 时无法关联，视为没有）。
@@ -1717,10 +1725,7 @@ async function summarizeHistoryWithAi(sessionId?: string) {
   aiRequestRunning = true;
   summaryBusyAction = "summary";
   await invoke("show_summary_window").catch(() => {});
-  emit("history-ai-state", { action: "summary", running: true });
-  const time = currentTimeLabel();
-  const targetSessionId = sessionId || activeSessionId;
-  summaryPageItems.push({ kind: "summary", time, text: "", sessionId: targetSessionId });
+  summaryPageItems.push({ kind: "summary", time: currentTimeLabel(), text: "", sessionId: sessionId || activeSessionId });
   const placeholderIndex = summaryPageItems.length - 1;
   emitSummaryState();
   try {

@@ -1740,6 +1740,20 @@ pub fn run() {
                 let _ = w.set_ignore_cursor_events(false);
                 let _ = w.set_shadow(false);
                 let _ = w.show();
+
+                // Treat a native close gesture (e.g. Alt+F4) as a hide: the
+                // window must stay alive so the main-window toggle can restore
+                // it, and the button state has to be reported back.
+                let app_handle = app.handle().clone();
+                let _ = w.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        if let Some(win) = app_handle.get_webview_window("subtitles") {
+                            let _ = win.hide();
+                        }
+                        let _ = app_handle.emit("subtitle-visibility-changed", false);
+                    }
+                });
             }
             if let Some(w) = app.get_webview_window("subtitle-settings") {
                 let _ = w.set_decorations(false);
