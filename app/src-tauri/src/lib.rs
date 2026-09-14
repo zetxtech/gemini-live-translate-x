@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
+#[cfg(windows)]
 use tauri_winrt_notification::{Duration as ToastDuration, Toast};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -1460,20 +1461,28 @@ fn set_subtitle_always_on_top(app: tauri::AppHandle, always_on_top: bool) -> Res
 
 #[tauri::command]
 fn show_taskbar_minimize_notification(app: tauri::AppHandle) -> Result<(), String> {
-    let app_handle = app.clone();
-    Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("应用已最小化到任务栏")
-        .text1("字幕窗口会继续显示。")
-        .duration(ToastDuration::Short)
-        .add_button("不再提示", "never-show-taskbar-minimize-tip")
-        .on_activated(move |action| {
-            if action.as_deref() == Some("never-show-taskbar-minimize-tip") {
-                let _ = app_handle.emit("taskbar-minimize-tip-never", ());
-            }
-            Ok(())
-        })
-        .show()
-        .map_err(|e| e.to_string())
+    #[cfg(windows)]
+    {
+        let app_handle = app.clone();
+        Toast::new(Toast::POWERSHELL_APP_ID)
+            .title("应用已最小化到任务栏")
+            .text1("字幕窗口会继续显示。")
+            .duration(ToastDuration::Short)
+            .add_button("不再提示", "never-show-taskbar-minimize-tip")
+            .on_activated(move |action| {
+                if action.as_deref() == Some("never-show-taskbar-minimize-tip") {
+                    let _ = app_handle.emit("taskbar-minimize-tip-never", ());
+                }
+                Ok(())
+            })
+            .show()
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Ok(())
+    }
 }
 
 #[tauri::command]

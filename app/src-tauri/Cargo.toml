@@ -31,11 +31,7 @@ futures-util = "0.3"
 url = "2"
 cpal = "0.15"
 tauri-plugin-notification = "2"
-tauri-winrt-notification = "0.7.3"
 
-# windows-future 0.2.1 unconditionally references windows_core::imp::IMarshal,
-# which only exists on Windows targets, breaking non-Windows builds.
-# The vendored copy guards those references with cfg(windows).
-[patch.crates-io]
-windows-future = { path = "vendor/windows-future" }
+[target.'cfg(windows)'.dependencies]
+tauri-winrt-notification = "0.7.3"
 
