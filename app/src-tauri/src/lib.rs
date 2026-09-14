@@ -70,15 +70,18 @@ struct SubtitleHitArea {
     h: f64,
 }
 
+#[cfg(windows)]
 #[repr(C)]
 struct POINT { x: i32, y: i32 }
 
+#[cfg(windows)]
 #[link(name = "user32")]
 extern "system" {
     fn GetCursorPos(lpPoint: *mut POINT) -> i32;
     fn GetAsyncKeyState(v_key: i32) -> i16;
 }
 
+#[cfg(windows)]
 const VK_LBUTTON: i32 = 0x01;
 
 static CAPTURING: AtomicBool = AtomicBool::new(false);
@@ -1513,6 +1516,7 @@ fn exit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+#[cfg(windows)]
 fn start_lock_tracking(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         // Lock button: top:8px, right:10px + padding:4px → expanded hit area
@@ -1646,6 +1650,9 @@ fn start_lock_tracking(app: tauri::AppHandle) {
         }
     });
 }
+
+#[cfg(not(windows))]
+fn start_lock_tracking(_app: tauri::AppHandle) {}
 
 fn to_mono_f32(data: &[f32], channels: usize) -> Vec<f32> {
     if channels <= 1 {
