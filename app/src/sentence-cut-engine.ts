@@ -95,13 +95,6 @@ export class SentenceCutEngine {
     this.onChange();
   }
 
-  flushReadySentence() {
-    if (!this.readyToCommit) return;
-    this.readyToCommit = false;
-    this.commitCurrentSentenceNow();
-    this.onChange();
-  }
-
   appendOriginal(text: string, _finished = false) {
     if (!text) return;
     // Original never cuts: it keeps appending and scrolls on the current line.
@@ -142,6 +135,7 @@ export class SentenceCutEngine {
       pendingCutText: this.pendingCutText,
       hasPendingCutTimer: this.pendingSentenceCutTimer !== null,
       hasPendingAction: this.pendingSentenceCutAction !== null,
+      readyToCommit: this.readyToCommit,
       pendingShortTail: this.pendingShortTail?.tail || "",
     };
   }
@@ -320,10 +314,10 @@ export class SentenceCutEngine {
         // prevents the overlay from receiving an empty current row between
         // the history commit and the next sentence's first render.
         action();
+        this.onChange();
       } else {
         this.readyToCommit = true;
       }
-      this.onChange();
     }, delay);
   }
 

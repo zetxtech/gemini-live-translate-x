@@ -241,7 +241,7 @@ describe("e2e: single-line modes (historyRows=0)", () => {
 });
 
 describe("e2e: multi-line history modes", () => {
-  it("history=1: short sentence readable then 500ms -> one history + current gap placeholder", () => {
+  it("history=1: keeps the completed line current until the next line has text", () => {
     const { clock, engine, commits, latestFrame, paintReadable } = createPipeline({
       bilingual: false,
       historyRows: 1,
@@ -257,15 +257,17 @@ describe("e2e: multi-line history modes", () => {
 
     clock.advance(1);
     clock.flushZero();
-    expect(commits).toHaveLength(1);
-    expect(commits[0].text).toBe("确认问题切换。");
-
-    // After commit: history has the sentence, current is placeholder gap.
-    expect(latestFrame().history).toEqual(["确认问题切换。"]);
-    expect(latestFrame().current[0]).toBe("\u00a0");
+    expect(commits).toHaveLength(0);
+    expect(latestFrame().history).toEqual(["\u00a0"]);
+    expect(latestFrame().current).toEqual(["确认问题切换。"]);
     expect(latestFrame().empty).toEqual([]);
 
-    // Promote continuity: outgoing current text matches new history row.
+    engine.appendTranslation("下一句开始");
+    expect(commits).toHaveLength(1);
+    const switchedFrame = latestFrame();
+    expect(switchedFrame.history).toEqual(["确认问题切换。"]);
+    expect(switchedFrame.current).toEqual(["下一句开始"]);
+
     const frame = buildCaptionFrame(
       { history: engine.hist, curO: engine.curO, curT: engine.curT },
       { bilingual: false, historyRows: 1 },
@@ -285,13 +287,15 @@ describe("e2e: multi-line history modes", () => {
     clock.advance(500);
     clock.flushZero();
 
+    expect(commits).toHaveLength(0);
+    engine.appendTranslation("下一话题");
+
     expect(commits).toHaveLength(1);
     expect(latestFrame().history).toEqual(["请确认切换。"]);
     expect(latestFrame().history.some((text) => text.includes("Please"))).toBe(false);
 
     engine.appendOriginal("Next topic");
-    engine.appendTranslation("下一话题");
-    expect(latestFrame().current).toEqual(["下一话题", "Next topic"]);
+    expect(latestFrame().current).toEqual(["下一话题", "Please confirm the switch. Next topic"]);
     expect(latestFrame().history).toEqual(["请确认切换。"]);
   });
 
@@ -308,6 +312,8 @@ describe("e2e: multi-line history modes", () => {
       clock.advance(500);
       clock.flushZero();
     }
+
+    engine.appendTranslation("第四句话开始");
 
     expect(engine.hist).toHaveLength(3);
     // Visible frame only last 2.
@@ -344,6 +350,8 @@ describe("e2e: multi-line history modes", () => {
     expect(commits).toHaveLength(1);
     clock.advance(1);
     clock.flushZero();
+    expect(commits).toHaveLength(1);
+    engine.appendTranslation("第三句开始");
     expect(commits).toHaveLength(2);
     expect(commits[1].t - commits[0].t).toBeGreaterThanOrEqual(500);
   });
@@ -425,6 +433,8 @@ describe("e2e: long line scroll gate before cut", () => {
     expect(commits).toHaveLength(0);
     clock.advance(1);
     clock.flushZero();
+    expect(commits).toHaveLength(0);
+    engine.appendTranslation("下一句开始");
     expect(commits).toHaveLength(1);
     expect(commits[0].text).toBe(longSentence);
   });
@@ -440,6 +450,7 @@ describe("e2e: punctuation / short-tail / comma rules through frame", () => {
     paintReadable();
     clock.advance(500);
     clock.flushZero();
+    engine.appendTranslation("下一句开始");
     expect(commits.map((item) => item.text)).toEqual(["会议已经结束！"]);
     expect(latestFrame().history).toEqual(["会议已经结束！"]);
   });
@@ -498,6 +509,7 @@ describe("e2e: punctuation / short-tail / comma rules through frame", () => {
     paintReadable(engine.curT);
     clock.advance(500);
     clock.flushZero();
+    engine.appendTranslation("下一句开始");
     expect(commits).toHaveLength(1);
     expect(engine.hist[0].o).toBe("Part one done.");
     expect(engine.hist[0].t).toBe("第一部分完成。");

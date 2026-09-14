@@ -1,0 +1,16 @@
+{
+  "autorun": false,
+  "terminals": [
+    {
+      "name": "Gemini Live Translate Tauri Dev",
+      "description": "Launch the Tauri desktop development app.",
+      "command": "npm --prefix \"[workspaceFolder]\\app\" run tauri dev"
+    },
+    {
+      "name": "Gemini Live Translate Vite Dev",
+      "description": "Launch the frontend development server only.",
+      "command": "npm --prefix \"[workspaceFolder]\\app\" run dev",
+      "onlySingle": true
+    }
+  ]
+}

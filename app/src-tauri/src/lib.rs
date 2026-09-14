@@ -20,7 +20,40 @@ static SUBTITLE_ALWAYS_ON_TOP: AtomicBool = AtomicBool::new(true);
 static SUBTITLE_BG_ACTIVE: AtomicBool = AtomicBool::new(false);
 static SUBTITLE_HIT_AREAS: Mutex<Vec<SubtitleHitArea>> = Mutex::new(Vec::new());
 static LOCK_BUTTON_RECT: Mutex<(f64, f64, f64, f64)> = Mutex::new((0.0, 0.0, 0.0, 0.0));
-static GEMINI_TX: Mutex<Option<mpsc::UnboundedSender<String>>> = Mutex::new(None);
+struct GeminiConnectionState {
+    generation: u64,
+    sender: Option<mpsc::UnboundedSender<String>>,
+}
+
+impl GeminiConnectionState {
+    fn begin(&mut self, sender: mpsc::UnboundedSender<String>) -> u64 {
+        self.generation = self.generation.wrapping_add(1);
+        self.sender = Some(sender);
+        self.generation
+    }
+
+    fn disconnect(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        self.sender = None;
+    }
+
+    fn is_current(&self, generation: u64) -> bool {
+        self.generation == generation && self.sender.is_some()
+    }
+
+    fn finish(&mut self, generation: u64) -> bool {
+        if self.generation != generation {
+            return false;
+        }
+        self.sender = None;
+        true
+    }
+}
+
+static GEMINI_CONNECTION: Mutex<GeminiConnectionState> = Mutex::new(GeminiConnectionState {
+    generation: 0,
+    sender: None,
+});
 static LLM_REQUESTS: LazyLock<Mutex<HashMap<String, Arc<LlmRequestControl>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
@@ -113,22 +146,31 @@ fn save_summary_items(app: tauri::AppHandle, items: String) -> Result<(), String
 
 #[tauri::command]
 async fn gemini_connect(app: tauri::AppHandle, url: String, proxy_url: Option<String>) -> Result<(), String> {
-    gemini_disconnect();
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-    if let Ok(mut slot) = GEMINI_TX.lock() {
-        *slot = Some(tx);
-    }
+    let generation = GEMINI_CONNECTION
+        .lock()
+        .map_err(|_| "Gemini connection lock failed".to_string())?
+        .begin(tx);
 
     tauri::async_runtime::spawn(async move {
         let result = async {
-            app.emit("gemini-log", "正在创建网络连接").map_err(|e| e.to_string())?;
+            if !gemini_connection_is_current(generation) {
+                return Ok::<(), String>(());
+            }
+            emit_gemini_event(&app, generation, "gemini-log", "正在创建网络连接")?;
             let stream = connect_proxy_stream(&url, proxy_url.as_deref()).await?;
-            app.emit("gemini-log", "网络连接已建立，正在进行 WebSocket 握手").map_err(|e| e.to_string())?;
+            if !gemini_connection_is_current(generation) {
+                return Ok(());
+            }
+            emit_gemini_event(&app, generation, "gemini-log", "网络连接已建立，正在进行 WebSocket 握手")?;
             let (ws, _) = client_async_tls_with_config(url.as_str(), stream, None, None)
                 .await
                 .map_err(|e| e.to_string())?;
+            if !gemini_connection_is_current(generation) {
+                return Ok(());
+            }
             let (mut write, mut read) = ws.split();
-            app.emit("gemini-open", ()).map_err(|e| e.to_string())?;
+            emit_gemini_event(&app, generation, "gemini-open", ())?;
 
             loop {
                 tokio::select! {
@@ -139,18 +181,21 @@ async fn gemini_connect(app: tauri::AppHandle, url: String, proxy_url: Option<St
                         }
                     }
                     incoming = read.next() => {
+                        if !gemini_connection_is_current(generation) {
+                            break;
+                        }
                         match incoming {
-                            Some(Ok(Message::Text(text))) => app.emit("gemini-message", text.to_string()).map_err(|e| e.to_string())?,
-                            Some(Ok(Message::Binary(data))) => app.emit("gemini-message", String::from_utf8_lossy(&data).to_string()).map_err(|e| e.to_string())?,
+                            Some(Ok(Message::Text(text))) => emit_gemini_event(&app, generation, "gemini-message", text.to_string())?,
+                            Some(Ok(Message::Binary(data))) => emit_gemini_event(&app, generation, "gemini-message", String::from_utf8_lossy(&data).to_string())?,
                             Some(Ok(Message::Close(frame))) => {
                                 let reason = frame
                                     .map(|v| format!("WebSocket 被关闭：{} {}", v.code, v.reason))
                                     .unwrap_or_else(|| "WebSocket 被关闭".to_string());
-                                app.emit("gemini-log", reason).map_err(|e| e.to_string())?;
+                                emit_gemini_event(&app, generation, "gemini-log", reason)?;
                                 break;
                             }
                             None => {
-                                app.emit("gemini-log", "WebSocket 数据流结束").map_err(|e| e.to_string())?;
+                                emit_gemini_event(&app, generation, "gemini-log", "WebSocket 数据流结束")?;
                                 break;
                             }
                             Some(Ok(_)) => {}
@@ -162,13 +207,7 @@ async fn gemini_connect(app: tauri::AppHandle, url: String, proxy_url: Option<St
             Ok::<(), String>(())
         }.await;
 
-        if let Ok(mut slot) = GEMINI_TX.lock() {
-            *slot = None;
-        }
-        if let Err(e) = result {
-            let _ = app.emit("gemini-error", e);
-        }
-        let _ = app.emit("gemini-close", ());
+        finish_gemini_connection(&app, generation, result);
     });
 
     Ok(())
@@ -176,9 +215,10 @@ async fn gemini_connect(app: tauri::AppHandle, url: String, proxy_url: Option<St
 
 #[tauri::command]
 fn gemini_send(message: String) -> Result<(), String> {
-    let tx = GEMINI_TX
+    let tx = GEMINI_CONNECTION
         .lock()
         .map_err(|_| "Gemini connection lock failed".to_string())?
+        .sender
         .clone()
         .ok_or("Gemini is not connected")?;
     tx.send(message).map_err(|_| "Gemini connection is closed".to_string())
@@ -186,9 +226,44 @@ fn gemini_send(message: String) -> Result<(), String> {
 
 #[tauri::command]
 fn gemini_disconnect() {
-    if let Ok(mut slot) = GEMINI_TX.lock() {
-        *slot = None;
+    if let Ok(mut state) = GEMINI_CONNECTION.lock() {
+        state.disconnect();
     }
+}
+
+fn gemini_connection_is_current(generation: u64) -> bool {
+    GEMINI_CONNECTION
+        .lock()
+        .map(|state| state.is_current(generation))
+        .unwrap_or(false)
+}
+
+fn finish_gemini_connection(app: &tauri::AppHandle, generation: u64, result: Result<(), String>) {
+    let Ok(mut state) = GEMINI_CONNECTION.lock() else {
+        return;
+    };
+    if !state.finish(generation) {
+        return;
+    }
+    if let Err(error) = result {
+        let _ = app.emit("gemini-error", error);
+    }
+    let _ = app.emit("gemini-close", ());
+}
+
+fn emit_gemini_event<S: serde::Serialize + Clone>(
+    app: &tauri::AppHandle,
+    generation: u64,
+    event: &str,
+    payload: S,
+) -> Result<(), String> {
+    let state = GEMINI_CONNECTION
+        .lock()
+        .map_err(|_| "Gemini connection lock failed".to_string())?;
+    if state.generation != generation {
+        return Ok(());
+    }
+    app.emit(event, payload).map_err(|e| e.to_string())
 }
 
 #[derive(serde::Serialize)]
@@ -781,6 +856,33 @@ fn decode_chunked(body: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stale_gemini_connection_cannot_finish_current_connection() {
+        let (first_sender, _) = mpsc::unbounded_channel();
+        let (second_sender, _) = mpsc::unbounded_channel();
+        let mut state = GeminiConnectionState { generation: 0, sender: None };
+
+        let first_generation = state.begin(first_sender);
+        let second_generation = state.begin(second_sender);
+
+        assert!(!state.finish(first_generation));
+        assert!(state.is_current(second_generation));
+        assert!(state.finish(second_generation));
+        assert!(state.sender.is_none());
+    }
+
+    #[test]
+    fn gemini_disconnect_invalidates_running_connection() {
+        let (sender, _) = mpsc::unbounded_channel();
+        let mut state = GeminiConnectionState { generation: 0, sender: None };
+        let generation = state.begin(sender);
+
+        state.disconnect();
+
+        assert!(!state.is_current(generation));
+        assert!(!state.finish(generation));
+    }
 
     #[test]
     fn decodes_simple_chunked_body() {

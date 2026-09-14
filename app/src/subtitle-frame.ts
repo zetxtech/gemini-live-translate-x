@@ -12,7 +12,7 @@ export type SubtitleFramePayload = {
 };
 
 export type SubtitleFrameRow = {
-  role: "history" | "history-placeholder" | "current-trans" | "current-orig" | "current-placeholder-trans" | "current-placeholder-orig" | "empty" | "empty-sub";
+  role: "history" | "history-placeholder" | "current-trans" | "current-orig" | "empty" | "empty-sub";
   text: string;
   className: string;
   key?: string;
@@ -89,13 +89,6 @@ export function buildCaptionFrame(
         key: "current:orig",
       });
     } else if (payload.curO) {
-      // Keep the current row pair stable while translation is between chunks.
-      currentRows.push({
-        role: "current-placeholder-trans",
-        text: PLACEHOLDER,
-        className: "line trans cur pending",
-        key: "current:trans",
-      });
       currentRows.push({
         role: "current-orig",
         text: payload.curO,
@@ -112,24 +105,13 @@ export function buildCaptionFrame(
     });
   }
 
-  // Keep current-group structure while history is visible and current is empty
-  // (gap between commit and next translation chunk).
-  if (currentRows.length === 0 && visibleHistory.length > 0) {
+  if (currentRows.length === 0 && settings.bilingual && lastOriginal) {
     currentRows.push({
-      role: "current-placeholder-trans",
-      text: PLACEHOLDER,
-      className: "line trans cur pending",
-      key: "current:trans",
+      role: "current-orig",
+      text: lastOriginal,
+      className: "line orig cur",
+      key: "current:orig",
     });
-    if (settings.bilingual) {
-      const originText = payload.curO || lastOriginal;
-      currentRows.push({
-        role: originText ? "current-orig" : "current-placeholder-orig",
-        text: originText || PLACEHOLDER,
-        className: originText ? "line orig cur" : "line orig cur pending",
-        key: "current:orig",
-      });
-    }
   }
 
   const isTrulyEmpty = !payload.history.length && !payload.curO && !payload.curT;

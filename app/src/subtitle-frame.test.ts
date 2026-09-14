@@ -139,9 +139,8 @@ describe("buildCaptionFrame — empty / pending / placeholders", () => {
     );
     expect(frame.showEmpty).toBe(false);
     expect(frame.showHistory).toBe(true);
-    expect(frame.currentRows.map((row) => row.role)).toEqual(["current-placeholder-trans"]);
-    expect(frame.currentRows[0].text).toBe(PLACEHOLDER);
-    expect(frame.currentRows[0].className).toContain("pending");
+    expect(frame.currentRows).toEqual([]);
+    expect(frame.showCurrent).toBe(false);
   });
 
   it("bilingual reserves pending original while translation is present", () => {
@@ -174,18 +173,14 @@ describe("buildCaptionFrame — empty / pending / placeholders", () => {
     expect(frame.visibleHistoryCount).toBe(1);
   });
 
-  it("history gap with bilingual keeps translation pending but holds last original", () => {
+  it("history gap with bilingual keeps only the last original", () => {
     const frame = buildCaptionFrame(
       { history: [{ id: 1, o: "a", t: "历史" }], curO: "", curT: "" },
       { bilingual: true, historyRows: 1 },
     );
-    expect(frame.currentRows.map((row) => row.role)).toEqual([
-      "current-placeholder-trans",
-      "current-orig",
-    ]);
-    expect(frame.currentRows[0].text).toBe(PLACEHOLDER);
-    expect(frame.currentRows[1].text).toBe("a");
-    expect(frame.currentRows[1].className).not.toContain("pending");
+    expect(frame.currentRows.map((row) => row.role)).toEqual(["current-orig"]);
+    expect(frame.currentRows[0].text).toBe("a");
+    expect(frame.currentRows[0].className).not.toContain("pending");
   });
 
   it("holds the last completed original until the next original chunk", () => {
@@ -197,7 +192,7 @@ describe("buildCaptionFrame — empty / pending / placeholders", () => {
       },
       { bilingual: true, historyRows: 1 },
     );
-    expect(frame.currentRows[1].text).toBe("We'll send the details afterwards.");
+    expect(frame.currentRows[0].text).toBe("We'll send the details afterwards.");
   });
 
   it("keeps the scrolling original visible while translation is absent", () => {
@@ -209,14 +204,10 @@ describe("buildCaptionFrame — empty / pending / placeholders", () => {
       },
       { bilingual: true, historyRows: 1 },
     );
-    // Keep the original row at a stable index while translation is absent.
-    expect(frame.currentRows.map((row) => row.role)).toEqual([
-      "current-placeholder-trans",
-      "current-orig",
-    ]);
-    expect(frame.currentRows[1].text).toBe("Thanks everyone. Can everyone see my screen now?");
-    expect(frame.currentRows[1].className).toContain("cur");
-    expect(frame.currentRows.map((row) => row.key)).toEqual(["current:trans", "current:orig"]);
+    expect(frame.currentRows.map((row) => row.role)).toEqual(["current-orig"]);
+    expect(frame.currentRows[0].text).toBe("Thanks everyone. Can everyone see my screen now?");
+    expect(frame.currentRows[0].className).toContain("cur");
+    expect(frame.currentRows.map((row) => row.key)).toEqual(["current:orig"]);
   });
 
   it("keeps current row keys stable across a translation commit", () => {
@@ -234,8 +225,8 @@ describe("buildCaptionFrame — empty / pending / placeholders", () => {
     );
 
     expect(active.currentRows.map((row) => row.key)).toEqual(["current:trans", "current:orig"]);
-    expect(committed.currentRows.map((row) => row.key)).toEqual(["current:trans", "current:orig"]);
-    expect(committed.currentRows[1].text).toBe("English keeps streaming without restarting");
+    expect(committed.currentRows.map((row) => row.key)).toEqual(["current:orig"]);
+    expect(committed.currentRows[0].text).toBe("English keeps streaming without restarting");
   });
 });
 
